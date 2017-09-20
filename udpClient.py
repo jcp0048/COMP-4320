@@ -20,9 +20,15 @@ print "UDP target IP:", UDP_IP
 print "UDP target port:", UDP_PORT
 print "message:", MESSAGE
 
-sock = socket.socket(socket.AF_INET, # Internet 
+sock = socket.socket(socket.AF_INET, # Internet
 	socket.SOCK_DGRAM) # UDP
 sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
 
 data, addr = sock.recvfrom(256) # buffer size is 256 bytes
 print "received message:", data
+
+TML, requestID = 0
+opration, string = ""
+
+if sock.recvfrom(256) == "cLength":
+	sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
