@@ -11,38 +11,28 @@ void error(const char *msg)
 	exit(1);
 }
 
-//Below the structs for return messages are defined
-struct cLengthMessage {
-	char TML;
-	char RequestID;
-	char Operation;
-	char length;
-};
-struct disvowUpcaseMessage {
-	char TML;
-	char RequestID;
-	char ReturnString[256];
-};
+//Below the structs for incoming & return messages are defined
+struct request {
+		uint8_t TML;
+		uint8_t requestID;
+		uint8_t operation;
+		char inputStr[252];
+}__attribute__((__packed__));
 
-//char * toUpperCase(char inputArray[]) {
-//	int i = 0;
-//	while(inputArray[i])
-//   {
-//      putchar (toupper(inputArray[i]));
-//      i++;
-//   }
-//   return inputArray[];
-//}
+struct response {
+		uint8_t TML;
+		uint8_t requestID;
+		char result[252];
+}__attribute__((__packed__));
+
 
 int main(int argc, char *argv[])
-{
+{	
 	int sockfd, portNum, newsockfd, socketReadErrorFlag;
 	struct sockaddr_in serv_addr; 
 	struct sockaddr cli_addr;
-	//socklen_t clientLength;
 	socklen_t clientLength;
 	char buffer[256];
-	//char msgStr[];
 
 	
     if (argc < 2) {
@@ -92,13 +82,12 @@ int main(int argc, char *argv[])
     //clientLength = sizeof(cli_addr);
 	printf("Listened and got length\n");
 	
-    // This accept() function will write the connecting client's address info 
-    // into the the address structure and the size of that structure is clientLength.
-    // The accept() returns a new socket file descriptor for the accepted connection.
-    // So, the original socket file descriptor can continue to be used 
-    // for accepting new connections while the new socker file descriptor is used for
-    // communicating with the connected client.
-    //newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clientLength);
+    /* This accept() function will write the connecting client's address info 
+       into the the address structure and the size of that structure is clientLength.
+       The accept() returns a new socket file descriptor for the accepted connection.
+       So, the original socket file descriptor can continue to be used 
+       for accepting new connections while the new socker file descriptor is used for
+       communicating with the connected client. */
     newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clientLength);
     if (newsockfd < 0)  {
         error("ERROR on accept");
@@ -106,14 +95,17 @@ int main(int argc, char *argv[])
 	}
 	else {
 		printf("No error past accept() and newsockfd > 0");
+		
 	}
-	
-	//printf("server: got connection from %s port %d\n",
-    //        inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
-	 
-
     
+	bzero(buffer,256);
 
+	// Initial reply to client
+	socketReadErrorFlag = read(newsockfd,buffer,255);
+	if (socketReadErrorFlag < 0) 
+		error("ERROR reading from socket");
+	strcpy(buffer, "Connection Established!") ;
+	send(newsockfd, buffer, sizeof(buffer), 0);
 	
 	while(1) {
 		bzero(buffer,256);
@@ -121,77 +113,56 @@ int main(int argc, char *argv[])
 		socketReadErrorFlag = read(newsockfd,buffer,255);
 		if (socketReadErrorFlag < 0) 
 			error("ERROR reading from socket");
+		struct request inRequest; //This is the message from the client
+		inRequest.TML = *(uint8_t *)(buffer);
+		inRequest.requestID = (uint8_t)(buffer[1]);
+		inRequest.operation = (uint8_t) (buffer[2]);
+		int requestInputLen = inRequest.TML - 3;
+		memcpy(inRequest.inputStr, &buffer[3], requestInputLen);
+		
+		
 		printf("Here is the message: %s\n",buffer);
 		printf("Here is the message: %x\n",buffer);
-		uint8_t TML = *(uint8_t *)(buffer);
-		uint8_t requestID = (uint8_t)(buffer[1]);
-		uint8_t operation = (uint8_t) (buffer[2]);
-		int varLen = TML - 3;
-		char recvdVar[varLen];
-		//= buffer[3:(TML -1)];
-		memcpy(recvdVar, &buffer[3], varLen);
-		printf("recvdVar: %s\n", recvdVar);
-		printf("TML: %i\n", TML); 
-		printf("RequestID: %i\n", requestID);
-		printf("Operation: %i\n", operation);
-		//bzero(buffer,256);
+		printf("recvdVar: %s\n", inRequest.inputStr);
+		printf("TML: %i\n", inRequest.TML); 
+		printf("RequestID: %i\n", inRequest.requestID);
+		printf("Operation: %i\n", inRequest.operation);
 		
-		//char upperString[recvdVar]; = strupr(recvdVar); // String that is turned to upper case
-		char upperString[varLen]; // String that is turned to upper case
-		//memcpy(upperString, recvdVar, varLen);
-		int i = 0;
-		while((recvdVar[i]))
+		char upperString[requestInputLen]; // String that is turned to upper case
+
+		int i;
+		for(i = 0; i < requestInputLen; i++)
 		{
-			upperString[i] = toupper(recvdVar[i]);
-			//memcpy(&upperString[i],toupper(upperString[i]) , 1);
-			i++;
+			upperString[i] = toupper(inRequest.inputStr[i]);
 		}
-		//upperString = strupr(recvdVar);
-		if(operation == 3) {	//this is where UPPERCase gets off
+
+		if(inRequest.operation == 10) {	//this is where UPPERCase gets off
 			bzero(buffer,256);
 			printf("inside operation 3 \n");
-			buffer[0] = (char)(varLen + 2);
-			buffer[1] = (char)(requestID);
-			memcpy(&buffer[2], upperString, varLen);
+			//buffer[0] = (char)(varLen + 2);
+			//buffer[1] = (char)(requestID);
+			//memcpy(&buffer[2], upperString, varLen);
 			printf("upperString: %s \n", upperString);
-			send(newsockfd, buffer, TML, 0);
+
+			struct response returnMsg; //This is the message back to client
+			
+			returnMsg.TML = requestInputLen + 2;
+			//replyPacket.tml = 10;
+			returnMsg.requestID = inRequest.requestID;
+			//replyPacket.reqID = 1;
+			strcpy(returnMsg.result, upperString);
+
+			//send(newsockfd, buffer, TML, 0);
+			send(newsockfd, (void *) &returnMsg, returnMsg.TML, 0);
+			printf("sent returnMsg: %s \n", returnMsg);
+			printf("sent returnMsg: %x \n", returnMsg);
 			printf("sent buffer: %s \n", buffer);
 			printf("sent buffer: %x \n", buffer);
 
 			bzero(buffer,256);
 		}
-			
-		//switch(operation){
-		//	
-		//	case 1:	// Number of consonants
-		//	case 3: 
-		//		int cCount = 0;
-		//		//for(int i = 0; i < varLen; i++){
-		//		//	if(recvdVar[i] == '')
-		//		//}
-		//		int i = 0;
-		//		while(recvdVar[i])
-		//		{
-		//			putchar(toupper(inputArray[i]));
-		//			i++;
-		//		}
-		//		break;
-		//	case 2:
-		//		
-		//		break;
-		//	default:
-		//		printf("Operation not recognized");
-		//		
-		//}
+
 		bzero(buffer,256);
-		printf("Please type a message in response:\n");
-		//fgets(buffer, 256, stdin);
-		//msgStr = "Connection Established!";
-		strcpy(buffer, "Connection Established!") ;
-		close(sockfd);
-		// This send() function sends the 13 bytes of the string to the new socket
-		//send(newsockfd, "Hello, world!\n", 13, 0);
-		send(newsockfd, buffer, sizeof(buffer), 0);
 		printf("1 to exit: \n");
 		int exitcode;
 		scanf("%d", &exitcode);
@@ -200,13 +171,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 	}
-
-	
-
-	
+	close(sockfd);
     close(newsockfd);
-    
-	 
-    //printf("Hello world!\n");
     return 0;
 }
