@@ -38,7 +38,7 @@ if operation == 10 or operation == 5 or operation == 80:
 	TML = len(strArg) + 3 #variable length + TML + requestID + Op
 	packet = struct.pack("!BBB" + str(len(strArg)) + "s", TML, requestID,operation, strArg)
 	s.send(packet) # Sends the packet
-	data = s.recv(BUFFER_SIZE)	# waits for a reply
+	data = s.recvfrom(BUFFER_SIZE)	# waits for a reply
 	
 	print "data: " + str(data)
 	dataArray = list(data)
