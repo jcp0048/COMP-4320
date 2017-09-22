@@ -37,14 +37,14 @@ struct disvowUpcaseMessage {
 int main(int argc, char *argv[])
 {
 	int sockfd, portNum, newsockfd, socketReadErrorFlag;
-	struct sockaddr_in serv_addr; 
+	struct sockaddr_in serv_addr;
 	struct sockaddr cli_addr;
 	//socklen_t clientLength;
 	socklen_t clientLength;
 	char buffer[256];
 	//char msgStr[];
 
-	
+
     if (argc < 2) {
 		fprintf(stderr,"ERROR, no port provided\n");
         exit(1);
@@ -54,26 +54,26 @@ int main(int argc, char *argv[])
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0)
 		error("ERROR opening socket");
-	else 
+	else
 		printf("Socket seem to create sucessfully~\n");
-	
+
 	// clear address structure
     bzero((char *) &serv_addr, sizeof(serv_addr));
-	
+
 	portNum = atoi(argv[1]);
 
 	// setup host addr structure for us in bind call
 	// Server byte order
 	serv_addr.sin_family = AF_INET;
-	
+
 	// Convert short integer value for port must be converted into network byte order
 	serv_addr.sin_port = htons(portNum);
-	
+
 	// automatically be filled with current host's IP address
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	
+
     // bind(int fd, struct sockaddr *local_addr, socklen_t addr_length)
-    // bind() passes file descriptor, the address structure, 
+    // bind() passes file descriptor, the address structure,
     // and the length of the address structure
     // This bind() call will bind  the socket to the current IP address on port, portNum
     if (bind(sockfd, (struct sockaddr *) &serv_addr,
@@ -86,16 +86,16 @@ int main(int argc, char *argv[])
     // The listen() function places all incoming connection into a backlog queue
     // until accept() call accepts the connection.
     // Here, we set the maximum size for the backlog queue to 5.
-    listen(sockfd,5);			
-			
+    listen(sockfd,5);
+
     // The accept() call actually accepts an incoming connection
     //clientLength = sizeof(cli_addr);
 	printf("Listened and got length\n");
-	
-    // This accept() function will write the connecting client's address info 
+
+    // This accept() function will write the connecting client's address info
     // into the the address structure and the size of that structure is clientLength.
     // The accept() returns a new socket file descriptor for the accepted connection.
-    // So, the original socket file descriptor can continue to be used 
+    // So, the original socket file descriptor can continue to be used
     // for accepting new connections while the new socker file descriptor is used for
     // communicating with the connected client.
     //newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clientLength);
@@ -107,19 +107,19 @@ int main(int argc, char *argv[])
 	else {
 		printf("No error past accept() and newsockfd > 0");
 	}
-	
+
 	//printf("server: got connection from %s port %d\n",
     //        inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
-	 
 
-    
 
-	
+
+
+
 	while(1) {
 		bzero(buffer,256);
 
 		socketReadErrorFlag = read(newsockfd,buffer,255);
-		if (socketReadErrorFlag < 0) 
+		if (socketReadErrorFlag < 0)
 			error("ERROR reading from socket");
 		printf("Here is the message: %s\n",buffer);
 		printf("Here is the message: %x\n",buffer);
@@ -131,11 +131,11 @@ int main(int argc, char *argv[])
 		//= buffer[3:(TML -1)];
 		memcpy(recvdVar, &buffer[3], varLen);
 		printf("recvdVar: %s\n", recvdVar);
-		printf("TML: %i\n", TML); 
+		printf("TML: %i\n", TML);
 		printf("RequestID: %i\n", requestID);
 		printf("Operation: %i\n", operation);
 		//bzero(buffer,256);
-		
+
 		//char upperString[recvdVar]; = strupr(recvdVar); // String that is turned to upper case
 		char upperString[varLen]; // String that is turned to upper case
 		//memcpy(upperString, recvdVar, varLen);
@@ -160,29 +160,67 @@ int main(int argc, char *argv[])
 
 			bzero(buffer,256);
 		}
-			
-		//switch(operation){
-		//	
-		//	case 1:	// Number of consonants
-		//	case 3: 
-		//		int cCount = 0;
-		//		//for(int i = 0; i < varLen; i++){
-		//		//	if(recvdVar[i] == '')
-		//		//}
-		//		int i = 0;
-		//		while(recvdVar[i])
-		//		{
-		//			putchar(toupper(inputArray[i]));
-		//			i++;
-		//		}
-		//		break;
-		//	case 2:
-		//		
-		//		break;
-		//	default:
-		//		printf("Operation not recognized");
-		//		
-		//}
+
+		if(operation == 2) //this is for Disemvoweling
+		{
+			bzero(buffer,256);
+			printf("inside operation 2 \n");
+			char line[150];
+			char temp[150];
+			printf("Enter a line of string: ");
+			scanf("%[^\]", line);
+			for(i=0; line[i]!='\0'; ++i)
+			{
+        if(line[i]!='a' || line[i]!='e' || line[i]!='i' ||
+           line[i]!='o' || line[i]!='u' || line[i]!='A' ||
+           line[i]!='E' || line[i]!='I' || line[i]!='O' ||
+           line[i]!='U')
+					 {
+						 temp[i] = line[i];
+					 }
+      {
+			send(newsockfd, buffer, TML, 0);
+		}
+
+		if(operation == 1){ //this is for cLength
+			bzero(buffer,256);
+			printf("inside operation 1 \n");
+			char line[150];
+			int consonants = 0;
+			printf("Enter a line of string: ");
+			scanf("%[^\]", line);
+
+			for(i=0; line[i]!='\0'; ++i)
+			{
+				if((line[i]>='a'&& line[i]<='z') || (line[i]>='A'&& line[i]<='Z'))
+				{
+					++consonants;
+				}
+			}
+			printf("\nConsonants: %d",consonants);
+
+		// switch(operation){
+		//
+		// 	case 1:	// Number of consonants
+		// 	case 3:
+		// 		int cCount = 0;
+		// 		//for(int i = 0; i < varLen; i++){
+		// 		//	if(recvdVar[i] == '')
+		// 		//}
+		// 		int i = 0;
+		// 		while(recvdVar[i])
+		// 		{
+		// 			putchar(toupper(inputArray[i]));
+		// 			i++;
+		// 		}
+		// 		break;
+		// 	case 2:
+		//
+		// 		break;
+		// 	default:
+		// 		printf("Operation not recognized");
+		//
+		// }
 		bzero(buffer,256);
 		printf("Please type a message in response:\n");
 		//fgets(buffer, 256, stdin);
@@ -201,12 +239,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	
 
-	
+
+
     close(newsockfd);
-    
-	 
+
+
     //printf("Hello world!\n");
     return 0;
 }
